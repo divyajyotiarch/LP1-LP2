@@ -1,76 +1,99 @@
-#include <bits/stdc++.h>
-#include "tree.hpp"
-#include <chrono>
-
+#include<iostream>
+#include<stdlib.h>
+#include<queue>
 using namespace std;
 
-#define clock_now chrono::high_resolution_clock::now
-#define duration chrono::duration_cast<chrono::microseconds>
+class node
+{  
+  public:  node *left, *right; int data;
+};  
+class Breadthfs
+{ 
+  public:  node *insert(node *, int); 
+           void bfs(node *); 
+};
 
-void bfs(node *root){
-	queue<node*> q;
-	q.push(root);
-	node *c;
-	while(!q.empty()){
-
-		c = q.front();
-		q.pop();
-		if(c->left != NULL){
-			q.push(c->left);
-		}
-		if(c->right != NULL){
-			q.push(c->right);
-		}
-	}
+node *insert(node *root, int data)
+{                     //inserts a node in tree
+    if(!root) 
+    {
+        root=new node;  
+        root->left=NULL;
+        root->right=NULL;
+        root->data=data;
+        return root;
+    }
+    queue<node *> q;
+    q.push(root);  
+    while(!q.empty())
+    {
+        node *temp=q.front();  q.pop();
+        if(temp->left==NULL)
+        {
+            temp->left=new node;
+            temp->left->left=NULL; 
+            temp->left->right=NULL;
+            temp->left->data=data;
+            return root;
+        } 
+        else
+        {
+            q.push(temp->left); 
+        }
+        if(temp->right==NULL)
+        {
+            temp->right=new node;  
+            temp->right->left=NULL; 
+            temp->right->right=NULL;
+            temp->right->data=data;
+            return root; 
+        }
+    else
+    {
+        q.push(temp->right);  
+    }
+ }
 }
 
-void parallelBfs(node *root){
-	queue<node*> q;
-	q.push(root);
-	node *c;
-
-#pragma omp parallel sections
-	{
-		while(!q.empty()){
-		c = q.front();
-		q.pop();
-#pragma omp section
-		{
-			if(c->left != NULL){
-				q.push(c->left);
-			}
-		}
-#pragma omp section
-		{
-			if(c->right != NULL){
-				q.push(c->right);
-			}
-		}
-		}
-	}
+void bfs(node *head)
+{
+  queue<node*> q; 
+  q.push(head);    
+  int qSize;    
+  while (!q.empty())  
+  {   
+     qSize = q.size();   
+     #pragma omp parallel for                   //creates parallel threads 
+     for (int i = 0; i < qSize; i++)    
+     {
+        node* currNode;
+        #pragma omp critical  
+        {
+            currNode = q.front(); 
+            q.pop(); 
+            cout<<"\t"<<currNode->data;
+        }  //prints parent node
+        #pragma omp critical
+        {    
+           if(currNode->left) 
+              q.push(currNode->left);                   //push parent's left node in queue
+           if(currNode->right)  
+              q.push(currNode->right);    
+        }         //push parent's right node in queue
+   }  
 }
-
-int main(){
-	tree t;
-	auto start = clock_now();
-	for(int i = 0;i < 100000;i ++){
-		t.addNode(rand());
-	}
-	auto stop = clock_now();
-	auto time = duration(stop - start);
-	cout << "For filling the tree: " << time.count() << " microseconds" << endl;
-
-	start = clock_now();
-	bfs(t.returnRoot());
-	stop = clock_now();
-	time = duration(stop - start);
-	cout << "For serial bfs: " << time.count() << " microseconds" << endl;
-
-	start = clock_now();
-	parallelBfs(t.returnRoot());
-	stop = clock_now();
-	time = duration(stop - start);
-	cout << " Parallel bfs: " << time.count() << " microseconds" << endl;
-
-	return 0;
+}
+int main()
+{
+    node *root=NULL; int data; char ans;  
+    do
+    { 
+       cout<<"\n enter data=>"; 
+       cin>>data;
+       root=insert(root,data);   
+       cout<<"do you want insert one more node?";  
+       cin>>ans;
+    }while(ans=='y'||ans=='Y');
+    bfs(root);
+    return 0;
 }
